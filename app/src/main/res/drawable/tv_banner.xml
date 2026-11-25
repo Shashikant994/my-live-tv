@@ -18,11 +18,9 @@
             </gradient>
         </aapt:attr>
     </path>
-    <!-- Accent Glow Circle -->
     <path
         android:pathData="M160,90 m-56,0 a56,56 0 1,0 112,0 a56,56 0 1,0 -112,0"
         android:fillColor="#1A38BDF8" />
-    <!-- Broadcast Waves -->
     <path
         android:pathData="M112,102 C125,52 195,52 208,102"
         android:strokeWidth="7"
@@ -33,11 +31,9 @@
         android:strokeWidth="7"
         android:strokeColor="#F59E0B"
         android:strokeLineCap="round" />
-    <!-- Center Play -->
     <path
         android:pathData="M150,86 L150,114 L176,100 Z"
         android:fillColor="#FFFFFF" />
-    <!-- Bottom Accent Bar -->
     <path
         android:pathData="M96,138 L224,138"
         android:strokeWidth="4"

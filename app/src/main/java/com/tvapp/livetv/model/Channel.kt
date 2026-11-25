@@ -2,12 +2,15 @@ package com.tvapp.livetv.model
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.TimeUnit
 
 data class Channel(
+    val number: Int,
     val id: String,
     val name: String,
     val streamUrl: String,
@@ -18,19 +21,59 @@ data class Channel(
 data class PlaylistSource(
     val id: String,
     val label: String,
-    val url: String
+    val urls: List<String>
 )
 
 object M3uRepository {
     val PRESET_SOURCES = listOf(
-        PlaylistSource("in", "India (All)", "https://iptv-org.github.io/iptv/countries/in.m3u"),
-        PlaylistSource("hin", "Hindi", "https://iptv-org.github.io/iptv/languages/hin.m3u"),
-        PlaylistSource("news", "News", "https://iptv-org.github.io/iptv/categories/news.m3u"),
-        PlaylistSource("ent", "Entertainment", "https://iptv-org.github.io/iptv/categories/entertainment.m3u"),
-        PlaylistSource("mov", "Movies", "https://iptv-org.github.io/iptv/categories/movies.m3u"),
-        PlaylistSource("mus", "Music", "https://iptv-org.github.io/iptv/categories/music.m3u"),
-        PlaylistSource("spt", "Sports", "https://iptv-org.github.io/iptv/categories/sports.m3u"),
-        PlaylistSource("kid", "Kids", "https://iptv-org.github.io/iptv/categories/kids.m3u")
+        PlaylistSource(
+            "in_hin",
+            "India + Hindi",
+            listOf(
+                "https://iptv-org.github.io/iptv/languages/hin.m3u",
+                "https://iptv-org.github.io/iptv/countries/in.m3u"
+            )
+        ),
+        PlaylistSource(
+            "hin",
+            "Hindi Only",
+            listOf("https://iptv-org.github.io/iptv/languages/hin.m3u")
+        ),
+        PlaylistSource(
+            "mov",
+            "Movies",
+            listOf("https://iptv-org.github.io/iptv/categories/movies.m3u")
+        ),
+        PlaylistSource(
+            "news",
+            "News",
+            listOf("https://iptv-org.github.io/iptv/categories/news.m3u")
+        ),
+        PlaylistSource(
+            "ent",
+            "Entertainment",
+            listOf("https://iptv-org.github.io/iptv/categories/entertainment.m3u")
+        ),
+        PlaylistSource(
+            "mus",
+            "Music",
+            listOf("https://iptv-org.github.io/iptv/categories/music.m3u")
+        ),
+        PlaylistSource(
+            "spt",
+            "Sports",
+            listOf("https://iptv-org.github.io/iptv/categories/sports.m3u")
+        ),
+        PlaylistSource(
+            "kid",
+            "Kids",
+            listOf("https://iptv-org.github.io/iptv/categories/kids.m3u")
+        ),
+        PlaylistSource(
+            "rel",
+            "Devotional",
+            listOf("https://iptv-org.github.io/iptv/categories/religious.m3u")
+        )
     )
 
     private val client = OkHttpClient.Builder()
@@ -38,21 +81,38 @@ object M3uRepository {
         .readTimeout(25, TimeUnit.SECONDS)
         .build()
 
-    suspend fun fetchPlaylist(url: String = PRESET_SOURCES.first().url): List<Channel> =
+    suspend fun fetchPlaylists(urls: List<String>): List<Channel> =
         withContext(Dispatchers.IO) {
-            val request = Request.Builder().url(url).build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    throw IllegalStateException("Playlist fetch failed: HTTP ${response.code}")
+            val rawContents = urls.map { url ->
+                async {
+                    runCatching {
+                        val request = Request.Builder().url(url).build()
+                        client.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) "" else response.body?.string().orEmpty()
+                        }
+                    }.getOrDefault("")
                 }
-                val body = response.body?.string().orEmpty()
-                parseM3u(body)
+            }.awaitAll()
+
+            val merged = mutableListOf<Channel>()
+            val seenUrls = HashSet<String>()
+            for (content in rawContents) {
+                for (ch in parseM3u(content)) {
+                    if (seenUrls.add(ch.streamUrl)) {
+                        merged.add(ch)
+                    }
+                }
+            }
+            if (merged.isEmpty()) {
+                throw IllegalStateException("No channels loaded. Check TV internet connection.")
+            }
+            merged.sortedBy { it.name.lowercase() }.mapIndexed { index, ch ->
+                ch.copy(number = index + 1)
             }
         }
 
     fun parseM3u(content: String): List<Channel> {
         val channels = mutableListOf<Channel>()
-        val seenUrls = HashSet<String>()
         val lines = content.lines()
         var currentName = ""
         var currentGroup = "General"
@@ -79,9 +139,10 @@ object M3uRepository {
                     .trim()
                     .ifBlank { "Channel ${channels.size + 1}" }
             } else if (!line.startsWith("#")) {
-                if ((line.startsWith("http://") || line.startsWith("https://")) && seenUrls.add(line)) {
+                if (line.startsWith("http://") || line.startsWith("https://")) {
                     channels.add(
                         Channel(
+                            number = channels.size + 1,
                             id = "${line.hashCode()}",
                             name = currentName,
                             streamUrl = line,
@@ -95,7 +156,7 @@ object M3uRepository {
                 currentLogo = null
             }
         }
-        return channels.sortedBy { it.name.lowercase() }
+        return channels
     }
 
     private fun extractAttr(line: String, key: String): String? {
@@ -108,6 +169,7 @@ object UserPrefs {
     private const val PREFS = "tarang_tv_prefs"
     private const val KEY_FAVS = "favorites"
     private const val KEY_RECENT = "recent"
+    private const val KEY_CUSTOM_M3U = "custom_m3u_url"
 
     fun getFavorites(context: Context): Set<String> {
         val sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -136,5 +198,18 @@ object UserPrefs {
         val trimmed = list.take(20)
         sp.edit().putString(KEY_RECENT, trimmed.joinToString(",")).apply()
         return trimmed
+    }
+
+    fun getCustomM3uUrl(context: Context): String? {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_CUSTOM_M3U, null)
+            ?.takeIf { it.isNotBlank() }
+    }
+
+    fun saveCustomM3uUrl(context: Context, url: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_CUSTOM_M3U, url.trim())
+            .apply()
     }
 }
