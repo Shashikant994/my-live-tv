@@ -1,0 +1,46 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="320"
+                android:endY="180"
+                android:type="linear">
+                <item android:offset="0" android:color="#090D16" />
+                <item android:offset="0.55" android:color="#172554" />
+                <item android:offset="1" android:color="#312E81" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Accent Glow Circle -->
+    <path
+        android:pathData="M160,90 m-56,0 a56,56 0 1,0 112,0 a56,56 0 1,0 -112,0"
+        android:fillColor="#1A38BDF8" />
+    <!-- Broadcast Waves -->
+    <path
+        android:pathData="M112,102 C125,52 195,52 208,102"
+        android:strokeWidth="7"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M128,102 C137,72 183,72 192,102"
+        android:strokeWidth="7"
+        android:strokeColor="#F59E0B"
+        android:strokeLineCap="round" />
+    <!-- Center Play -->
+    <path
+        android:pathData="M150,86 L150,114 L176,100 Z"
+        android:fillColor="#FFFFFF" />
+    <!-- Bottom Accent Bar -->
+    <path
+        android:pathData="M96,138 L224,138"
+        android:strokeWidth="4"
+        android:strokeColor="#38BDF8"
+        android:strokeLineCap="round" />
+</vector>

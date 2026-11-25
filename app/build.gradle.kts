@@ -12,10 +12,9 @@ android {
         applicationId = "com.tvapp.livetv"
         minSdk = 21
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
-        // Update this with your GitHub username/repo for OTA updates
         buildConfigField("String", "GITHUB_OWNER", "\"Shashikant994\"")
         buildConfigField("String", "GITHUB_REPO", "\"my-live-tv\"")
     }
@@ -60,7 +59,8 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
 
-    // Networking for M3U playlists & GitHub OTA Updater
+    // Networking & Channel Logo Loading
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }

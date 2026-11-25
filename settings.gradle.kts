@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "LiveTV-AndroidTV"
+rootProject.name = "TarangTV"
 include(":app")

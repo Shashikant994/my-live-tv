@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +47,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun PlayerScreen(
     channel: Channel,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
     onNextChannel: () -> Unit,
     onPreviousChannel: () -> Unit,
     onBack: () -> Unit
@@ -71,7 +75,7 @@ fun PlayerScreen(
 
     LaunchedEffect(showOverlay) {
         if (showOverlay) {
-            delay(4000)
+            delay(4500)
             showOverlay = false
         }
     }
@@ -84,7 +88,7 @@ fun PlayerScreen(
 
             override fun onPlayerError(error: PlaybackException) {
                 isBuffering = false
-                errorMessage = "Stream error: ${error.errorCodeName}"
+                errorMessage = "Channel offline or unavailable (${error.errorCodeName}). Press Up/Down for next."
             }
         }
         exoPlayer.addListener(listener)
@@ -115,6 +119,11 @@ fun PlayerScreen(
                         }
                         KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_CHANNEL_DOWN -> {
                             onPreviousChannel()
+                            true
+                        }
+                        KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            onToggleFavorite()
+                            showOverlay = true
                             true
                         }
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
@@ -153,8 +162,8 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .background(Color(0xCC111827))
-                    .padding(24.dp)
+                    .background(Color(0xD90F172A), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 28.dp, vertical = 18.dp)
             ) {
                 Text(text = msg, color = Color(0xFFF87171), fontSize = 18.sp)
             }
@@ -165,8 +174,12 @@ fun PlayerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .background(Color(0xB30F172A))
-                    .padding(horizontal = 32.dp, vertical = 20.dp),
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(Color.Transparent, Color(0xE6090D16))
+                        )
+                    )
+                    .padding(horizontal = 36.dp, vertical = 24.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -174,21 +187,31 @@ fun PlayerScreen(
                     Text(
                         text = channel.name,
                         color = Color.White,
-                        fontSize = 24.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${channel.group}  •  Up/Down: Switch Channel  •  OK: Play/Pause",
+                        text = "${channel.group}  •  Up/Down: Next/Prev  •  OK: Play/Pause  •  Right: ${if (isFavorite) "★ Saved" else "☆ Save Fav"}",
                         color = Color(0xFF94A3B8),
                         fontSize = 14.sp
                     )
                 }
-                Text(
-                    text = "LIVE",
-                    color = Color(0xFF22C55E),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (isFavorite) {
+                        Text(
+                            text = "★ FAV",
+                            color = Color(0xFFF59E0B),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "● LIVE",
+                        color = Color(0xFF22C55E),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
