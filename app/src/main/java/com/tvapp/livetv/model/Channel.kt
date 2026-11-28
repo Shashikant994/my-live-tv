@@ -86,7 +86,10 @@ object M3uRepository {
             val rawContents = urls.map { url ->
                 async {
                     runCatching {
-                        val request = Request.Builder().url(url).build()
+                        val request = Request.Builder()
+                            .url(url)
+                            .header("User-Agent", "TarangTV/2.1.0 (Android)")
+                            .build()
                         client.newCall(request).execute().use { response ->
                             if (!response.isSuccessful) "" else response.body?.string().orEmpty()
                         }
@@ -170,6 +173,7 @@ object UserPrefs {
     private const val KEY_FAVS = "favorites"
     private const val KEY_RECENT = "recent"
     private const val KEY_CUSTOM_M3U = "custom_m3u_url"
+    private const val KEY_LIVE_PREVIEW = "live_preview_enabled"
 
     fun getFavorites(context: Context): Set<String> {
         val sp = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -210,6 +214,25 @@ object UserPrefs {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_CUSTOM_M3U, url.trim())
+            .apply()
+    }
+
+    fun clearCustomM3uUrl(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY_CUSTOM_M3U)
+            .apply()
+    }
+
+    fun isLivePreviewEnabled(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_LIVE_PREVIEW, true)
+    }
+
+    fun setLivePreviewEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_LIVE_PREVIEW, enabled)
             .apply()
     }
 }

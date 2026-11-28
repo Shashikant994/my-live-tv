@@ -2,6 +2,9 @@ package com.tvapp.livetv.updater
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.core.content.FileProvider
 import com.tvapp.livetv.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -44,20 +47,25 @@ object OtaUpdater {
 
             val assets = json.optJSONArray("assets") ?: return@withContext null
             var apkUrl: String? = null
+            var fallbackApkUrl: String? = null
             for (i in 0 until assets.length()) {
                 val asset = assets.getJSONObject(i)
                 val name = asset.optString("name")
                 if (name.endsWith(".apk", ignoreCase = true)) {
-                    apkUrl = asset.optString("browser_download_url")
-                    break
+                    val downloadUrl = asset.optString("browser_download_url")
+                    if (!name.contains("debug", ignoreCase = true)) {
+                        apkUrl = downloadUrl
+                        break
+                    } else if (fallbackApkUrl == null) {
+                        fallbackApkUrl = downloadUrl
+                    }
                 }
             }
-
-            if (apkUrl.isNullOrBlank()) return@withContext null
+            val resolvedUrl = apkUrl ?: fallbackApkUrl ?: return@withContext null
 
             ReleaseInfo(
                 versionName = tagName,
-                apkDownloadUrl = apkUrl,
+                apkDownloadUrl = resolvedUrl,
                 releaseNotes = json.optString("body", "New update available.")
             )
         }
@@ -109,6 +117,23 @@ object OtaUpdater {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(installIntent)
+        }
+    }
+
+    fun canInstallApk(context: Context): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
+            context.packageManager.canRequestPackageInstalls()
+    }
+
+    fun openUnknownSourcesSettings(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:${context.packageName}")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
         }
     }
 

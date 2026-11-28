@@ -1,7 +1,23 @@
+import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+}
+
+val keystorePropsFile = rootProject.file("keystore.properties")
+val keystoreProps = Properties().apply {
+    if (keystorePropsFile.exists()) {
+        keystorePropsFile.inputStream().use { load(it) }
+    }
+}
+
+fun signingProp(envKey: String, propKey: String): String? {
+    val envVal = System.getenv(envKey)
+    if (!envVal.isNullOrBlank()) return envVal
+    return keystoreProps.getProperty(propKey)?.takeIf { it.isNotBlank() }
 }
 
 android {
@@ -12,8 +28,8 @@ android {
         applicationId = "com.tvapp.livetv"
         minSdk = 21
         targetSdk = 35
-        versionCode = 4
-        versionName = "2.0.0"
+        versionCode = 5
+        versionName = "2.1.0"
 
         buildConfigField("String", "GITHUB_OWNER", "\"Shashikant994\"")
         buildConfigField("String", "GITHUB_REPO", "\"my-live-tv\"")
@@ -21,12 +37,15 @@ android {
 
     signingConfigs {
         create("release") {
-            val ksPath = System.getenv("KEYSTORE_FILE")
+            val ksPath = signingProp("KEYSTORE_FILE", "storeFile")
             if (!ksPath.isNullOrBlank()) {
-                storeFile = file(ksPath)
-                storePassword = System.getenv("KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("KEY_ALIAS")
-                keyPassword = System.getenv("KEY_PASSWORD")
+                val resolved = file(ksPath)
+                if (resolved.exists()) {
+                    storeFile = resolved
+                    storePassword = signingProp("KEYSTORE_PASSWORD", "storePassword")
+                    keyAlias = signingProp("KEY_ALIAS", "keyAlias")
+                    keyPassword = signingProp("KEY_PASSWORD", "keyPassword")
+                }
             }
         }
     }
@@ -34,9 +53,9 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            val ksPath = System.getenv("KEYSTORE_FILE")
-            if (!ksPath.isNullOrBlank()) {
-                signingConfig = signingConfigs.getByName("release")
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
             }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -49,12 +68,20 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 

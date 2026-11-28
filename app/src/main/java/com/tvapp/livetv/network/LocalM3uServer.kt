@@ -42,10 +42,15 @@ class LocalM3uServer(
                     }
 
                     var message = ""
-                    if (requestLine.startsWith("POST") && contentLength > 0) {
+                    if (requestLine.startsWith("POST") && contentLength in 1..16384) {
                         val bodyChars = CharArray(contentLength)
-                        reader.read(bodyChars, 0, contentLength)
-                        val body = String(bodyChars)
+                        var totalRead = 0
+                        while (totalRead < contentLength) {
+                            val read = reader.read(bodyChars, totalRead, contentLength - totalRead)
+                            if (read == -1) break
+                            totalRead += read
+                        }
+                        val body = String(bodyChars, 0, totalRead)
                         val urlParam = body.split("&")
                             .firstOrNull { it.startsWith("url=") }
                             ?.substringAfter("url=")
@@ -86,7 +91,7 @@ class LocalM3uServer(
                     """.trimIndent()
 
                     val out = PrintWriter(client.getOutputStream(), true)
-                    out.print("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n$html")
+                    out.print("HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nConnection: close\r\n\r\n$html")
                     out.flush()
                     client.close()
                 }
